@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as yup from 'yup';
+// import { useTranslation } from 'react-i18next';
 
 const validateUrl = (url) => {
   return new Promise((resolve, reject) => {
@@ -28,14 +29,15 @@ const FormRss = () => {
             setError(error);
         });
   };
-
+  // const { t, i18n } = useTranslation();
   return (
     <section className="container-fluid bg-dark p-5">
+      {/* <h1>{t('Welcome to React')}</h1> */}
       <div className="row">
         <div className="col-md-10 col-lg-8 mx-auto text-white">
           <h1 className="display-3 mb-0">RSS агрегатор</h1>
           <p className="lead">
-            Начните читать RSS сегодня! Это легко, это красиво.
+          Начните читать RSS сегодня! Это легко, это красиво.
           </p>
           <form className="rss-form text-body" onSubmit={handleFormSubmit}>
             <div className="row">
