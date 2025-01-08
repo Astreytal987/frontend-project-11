@@ -6,11 +6,11 @@ import * as bootstrap from 'bootstrap'
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import FormRss from '../components/FormRss';
+import App from '../components/App';
 
 // import './i18n';
 
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-root.render(<FormRss />);
+root.render(<App/>);
