@@ -1,7 +1,7 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import * as yup from "yup";
 // import { useTranslation } from 'react-i18next';
-import ThemeContext from '../context/index';
+import ThemeContext from "../context/index";
 
 const validateUrl = (url) => {
   return new Promise((resolve, reject) => {
@@ -18,7 +18,7 @@ const validateUrl = (url) => {
 
 const fetchData = (url) => {
   return fetch(
-    `https://allorigins.hexlet.app/get?url=${encodeURIComponent(url)}`
+    `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`
   ).then((response) => {
     if (response.ok) return response.json();
     throw new Error("Network response was not ok.");
@@ -28,31 +28,80 @@ const fetchData = (url) => {
 const handleParseData = (data, setItems, fids, setFids) => {
   const parser = new DOMParser();
   const DomTree = parser.parseFromString(data.contents, "text/html");
-  const title = DomTree.querySelector('title').textContent.replace('<![CDATA[', '').replace(']]>', '');
-  const hasTitle = fids.some(item => item.title === title); 
+  const title = DomTree.querySelector("title")
+    .textContent.replace("<![CDATA[", "")
+    .replace("]]>", "");
+  const hasTitle = fids.some((item) => item.title === title);
   if (hasTitle) {
-    console.log("это копия")
-    throw new Error("RSS уже существует"); 
+    throw new Error("RSS уже существует");
   }
   try {
-  const description = DomTree.querySelector("channel description").innerHTML
-  setFids(prevFids => [...prevFids, {
-    title: title,
-    description: description.replace('\x3C!--[CDATA[', '').replace(']]-->', ''),
-  }])
-  const rawItems = DomTree.querySelectorAll("item");
-  const parsedItems = Array.from(rawItems).map((item) => {
-    const title = item.querySelector('title').innerText;
-    const link = item.querySelector('guid').innerHTML;
-    return {
-      title: title.replace('<![CDATA[', '').replace(']]>', ''),
-      href: link,
-    };
+    const description = DomTree.querySelector("channel description").innerHTML;
+    setFids((prevFids) => [
+      ...prevFids,
+      {
+        url: data.status.url,
+        title: title,
+        description: description
+          .replace("\x3C!--[CDATA[", "")
+          .replace("]]-->", ""),
+      },
+    ]);
+    const rawItems = DomTree.querySelectorAll("item");
+    const parsedItems = Array.from(rawItems).map((item) => {
+      const title = item.querySelector("title").innerText;
+      const link = item.querySelector("guid").innerHTML;
+      return {
+        title: title.replace("<![CDATA[", "").replace("]]>", ""),
+        href: link,
+      };
+    });
+    setItems((prevItems) => [...parsedItems, ...prevItems]);
+  } catch (error) {
+    throw new Error("Ресурс не содержит валидный RSS");
+  }
+};
+
+const updateItems = (items, setItems, fids) => {
+  const promises = fids.map(feed => {
+    return fetchData(feed.url)
+      .then(data => {
+        const parser = new DOMParser();
+        const DomTree = parser.parseFromString(data.contents, "text/html");
+        const rawItems = DomTree.querySelectorAll("item");
+        return Array.from(rawItems).reduce((acc, item) => {
+          const title = item.querySelector("title").textContent.replace("<![CDATA[", "").replace("]]>", "");
+          const link = item.querySelector("guid").textContent;
+           if (!items.some(existingItem => existingItem.title === title)) {
+            console.log(title)
+            acc.push({
+              title,
+              href: link
+            });
+          }
+           return acc;
+        }, []);
+      })
+       .catch((error) => {
+        console.error("Failed to fetch or parse data:", error);
+        return []; 
+      });
   });
-  setItems(prevItems => [...prevItems, ...parsedItems]);
-} catch (error) {
-  throw new Error("Ресурс не содержит валидный RSS");
-}
+
+  Promise.all(promises)
+    .then(results => {
+      const newItems = results.flat();
+      if(newItems.length > 0) {
+        setItems(prevItems => {
+          const combinedItems = [...newItems, ...prevItems];
+           const uniqueItems = Array.from(new Map(combinedItems.map(item => [item.href, item])).values());
+           return uniqueItems;
+        });
+      }
+    })
+    .catch(error => {
+      console.error("Failed to process all items:", error);
+    });
 };
 
 const FormRss = () => {
@@ -60,6 +109,7 @@ const FormRss = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const { items, setItems, fids, setFids } = useContext(ThemeContext);
+  const timeoutRef = useRef(null);
 
   const handleInputChange = (e) => {
     setUrl(e.target.value);
@@ -72,11 +122,24 @@ const FormRss = () => {
     validateUrl(url)
       .then(() => fetchData(url))
       .then((data) => handleParseData(data, setItems, fids, setFids))
-      .then(() => { // Добавляем .then для успешного выполнения
+      .then(() => {
         setSuccess(true);
       })
       .catch((error) => setError(error.message));
   };
+
+  const update = () => {
+    if (fids.length > 0) {
+      updateItems(items, setItems, fids);
+      timeoutRef.current = setTimeout(update, 5000);
+    }
+  };
+
+  useEffect(() => {
+    update();
+    console.log("обнова")
+    return () => clearTimeout(timeoutRef.current);
+  }, [fids]);
 
   // const { t, i18n } = useTranslation();
   return (
@@ -126,9 +189,11 @@ const FormRss = () => {
               {error}
             </p>
           )}
-          {
-            success && <p className="feedback m-0 position-absolute small text-success">RSS успешно загружен</p>
-          }
+          {success && (
+            <p className="feedback m-0 position-absolute small text-success">
+              RSS успешно загружен
+            </p>
+          )}
         </div>
       </div>
     </section>
@@ -136,4 +201,3 @@ const FormRss = () => {
 };
 
 export default FormRss;
-

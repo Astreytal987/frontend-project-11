@@ -3,8 +3,8 @@ import ThemeContext from "../context/index";
 
 const ListRss = () => {
   const { items, fids } = useContext(ThemeContext);
-  console.log(items, fids);
-  console.log(items.length !== 0 && fids.length !== 0);
+  // console.log(items, fids);
+  // console.log(items.length !== 0 && fids.length !== 0);
   return (
     <section className="container-fluid container-xxl p-5">
       <div className="row">
