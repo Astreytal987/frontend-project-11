@@ -1,10 +1,10 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import ThemeContext from "../context/index";
 
 const ListRss = () => {
-  const { items, fids } = useContext(ThemeContext);
-  // console.log(items, fids);
-  // console.log(items.length !== 0 && fids.length !== 0);
+  const { items, fids, setSelectedItem } = useContext(ThemeContext);
+  const [viewedItems, setViewedItems] = useState([]);
+
   return (
     <section className="container-fluid container-xxl p-5">
       <div className="row">
@@ -20,10 +20,17 @@ const ListRss = () => {
                     <li className="list-group-item d-flex justify-content-between align-items-start border-0 border-end-0">
                       <a
                         href={item.href}
-                        className="fw-bold"
+                        className={
+                          viewedItems.some((viewedItem) => viewedItem.title === item.title)
+                            ? "fw-normal link-secondary"
+                            : "fw-bold"
+                        }
                         data-id={item.id}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => {
+                          setViewedItems((prevItems) => [...prevItems, item]);
+                        }}
                       >
                         {item.title}
                       </a>
@@ -33,6 +40,10 @@ const ListRss = () => {
                         data-id={item.id}
                         data-bs-toggle="modal"
                         data-bs-target="#modal"
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setViewedItems((prevItems) => [...prevItems, item]);
+                        }}
                       >
                         Просмотр
                       </button>

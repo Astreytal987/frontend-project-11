@@ -51,11 +51,14 @@ const handleParseData = (data, setItems, fids, setFids) => {
     const parsedItems = Array.from(rawItems).map((item) => {
       const title = item.querySelector("title").innerText;
       const link = item.querySelector("guid").innerHTML;
+      const description = DomTree.querySelector("description").innerHTML;
       return {
         title: title.replace("<![CDATA[", "").replace("]]>", ""),
+        description: description.replace("\x3C!--[CDATA[", "").replace("]]-->", ""),
         href: link,
       };
     });
+    console.log(parsedItems)
     setItems((prevItems) => [...parsedItems, ...prevItems]);
   } catch (error) {
     throw new Error("Ресурс не содержит валидный RSS");
@@ -72,24 +75,23 @@ const updateItems = (items, setItems, fids) => {
         return Array.from(rawItems).reduce((acc, item) => {
           const title = item.querySelector("title").textContent.replace("<![CDATA[", "").replace("]]>", "");
           const link = item.querySelector("guid").textContent;
-           if (!items.some(existingItem => existingItem.title === title)) {
-            console.log(title)
+          if (!items.some(existingItem => existingItem.title === title)) {
             acc.push({
               title,
               href: link
             });
           }
            return acc;
-        }, []);
-      })
-       .catch((error) => {
-        console.error("Failed to fetch or parse data:", error);
-        return []; 
+          }, []);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch or parse data:", error);
+          return []; 
+        });
       });
-  });
-
-  Promise.all(promises)
-    .then(results => {
+      
+      Promise.all(promises)
+      .then(results => {
       const newItems = results.flat();
       if(newItems.length > 0) {
         setItems(prevItems => {
